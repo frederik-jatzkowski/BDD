@@ -100,20 +100,22 @@ public class Polynom implements BooleanExpression {
     // Methoden zur Vereinfachung
     public void simplyfy(){
         // Das Absorptionsgesetz anwenden
-        this.useAbsorption();
+        //this.useAbsorption();
         // Das Verfahren von Quine anwenden
         this.useQuine();
     }
 
     private void useAbsorption(){
         Monom outerMonom;
+        Monom innerMonom;
         // Mit äußerer Schleife durch alle Monome iterieren
         for(int i = 0; i < this.monomes.size(); i++){
             outerMonom = this.monomes.get(i);
             // Mit innerer Schleife durch alle Monome iterieren
             for(int j = 0; j < this.monomes.size(); j++){
+                innerMonom = this.monomes.get(j);
                 // das äußere Monom mit allen inneren Monomen vergleichen
-                if(i != j && this.monomes.get(j).includes(outerMonom)){
+                if(i != j && innerMonom.includes(outerMonom)){
                     // Falls ein Monom komplett in einem zweite Monom enthalten ist, das zweite entfernen
                     this.monomes.remove(j);
                     // Der Entfernung in den Indizes Rechnung tragen
@@ -140,6 +142,7 @@ public class Polynom implements BooleanExpression {
     private void useQuine(){
         int matches = 1;
         Monom outerMonom;
+        Monom innerMonom;
         // Solange in der Schleife bleiben, bis es keine Matches für Quine mehr gibt
         while(matches != 0){
             // Matches auf 0 zurücksetzen
@@ -148,10 +151,11 @@ public class Polynom implements BooleanExpression {
             for(int i = 0; i < this.monomes.size(); i++){
                 outerMonom = this.monomes.get(i);
                 for(int j = 0; j < this.monomes.size(); j++){
+                    innerMonom = this.monomes.get(j);
                     // das äußere Monom mit allen inneren Monomen vergleichen
-                    if(i != j && outerMonom.canQuine(this.monomes.get(j))){
+                    if(i != j && outerMonom.canQuine(innerMonom)){
                         // Falls Quine angewendet werden kann, reduzieren
-                        outerMonom.useQuine(this.monomes.get(j));
+                        outerMonom.useQuine(innerMonom);
                         // Und das Redundante entfernen
                         this.monomes.remove(j);
                         // Der Entfernung in den Indizes Rechnung tragen
@@ -162,6 +166,7 @@ public class Polynom implements BooleanExpression {
                     }
                 }
             }
+            //this.useAbsorption();
         }
     }
 }

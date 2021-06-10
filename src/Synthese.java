@@ -14,7 +14,7 @@ public class Synthese {
             System.out.println("Kein Dateiname angegeben.");
             return;
         }
-        // String filePath = "./test/data/aufgabe1.bool";
+        // String filePath = "./test/aufgabe1_unoptimiert.bool";
 
         // Datei öffnen
         BufferedReader input;

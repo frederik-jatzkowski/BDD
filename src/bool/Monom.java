@@ -83,7 +83,14 @@ public class Monom implements BooleanExpression {
         int differences = 0;
         while (atomsIter.hasNext()){
             current = atomsIter.next();
-            if(!m.atoms.contains(current)) differences++;
+            if(!m.atoms.contains(current)) {
+                // Überprüfen, ob genau das Komplement des Unterschieds in m enthalten ist
+                if(!m.atoms.contains(new Atom(current.varName,!current.negated))){
+                    // Falls nicht, noch einen Unterschied hinzufügen
+                    differences++;
+                }
+                differences++;
+            }
         }
         return differences == 1 && differences != this.atoms.size();
     }
