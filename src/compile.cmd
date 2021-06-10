@@ -1,0 +1,1 @@
+javac Synthese.java -d ../dist
