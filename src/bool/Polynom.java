@@ -166,7 +166,7 @@ public class Polynom implements BooleanExpression {
                     }
                 }
             }
-            //this.useAbsorption();
+            this.useAbsorption();
         }
     }
 }
