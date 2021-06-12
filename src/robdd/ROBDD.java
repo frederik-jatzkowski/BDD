@@ -12,22 +12,32 @@ public class ROBDD {
     private LinkedList<Node> nodes;
     private BooleanExpression function;
     private String[] variables;
+    // Für Synthese
+    LinkedList<Node> prevLevel;
+    LinkedList<Node> currLevel;
+    
+    String prevVarName;
+    String currVarName;
+
+    Node currentParent;
+
 
 
     // Konstructor
     public ROBDD(String[] variables, String expression){
         // Aussage abspeichern
         this.expression = expression;
+        this.variables = variables;
         // Platz für Knoten schaffen
         this.nodes = new LinkedList<>();
-        Polynom function = new Polynom(expression);
+        Polynom function = new Polynom(expression, this.variables);
         // Auf Komplementierende Monome testen
         if(function.hasComplementingMonomes()){
             // Falls solche Vorliegen, ist die Funktion eine konstante 1
             this.function = new Constant(true);
         } else {
             // Ansonsten Funktion vereinfachen
-            function.simplyfy();
+            function.normalizeWithQuineMcCluskey();
         }
         this.function = function;
         // Variablenordnung merken
@@ -36,92 +46,89 @@ public class ROBDD {
 
 
     // Private Methods
+    private void evalCofactorsForCurrentLevel(){
+        // Über alle Nodes aus der vorherigen Ebene iterieren
+        for(int j = 0; j < this.prevLevel.size(); j++){
+            // Aktuell zu untersuchende Node
+            this.currentParent = this.prevLevel.get(j);
+            // Kofaktoren mit aktuellem Variablennamen berechnen
+            this.evalCofactor(true);
+            this.evalCofactor(false);
+        }
+    }
+
+    private void evalCofactor(boolean high){
+        BooleanExpression function = this.currentParent.function.evalWithCofactor(this.prevVarName, high);
+        this.createOrConnectChild(function, high);
+    }
+
+    private void createOrConnectChild(BooleanExpression function, boolean high){
+        // Variablen
+        Node compareNode;
+        boolean check;
+        // Es wird zunächst das child erstellt
+        Node newNode = new Node(function, this.currVarName);
+        // Es wird überprüft, ob die Node bereits existiert
+        check = false;
+        for (int k = 0; k < this.nodes.size(); k++){
+            compareNode = this.nodes.get(k);
+            if (compareNode.equals(newNode)){
+                // Falls sie bereits existiert, auf die aktuelle Ebene ziehen und als child einfügen
+                compareNode.varName = this.currVarName;
+                this.insertChild(compareNode, high);
+                check = true;
+                if (!this.currLevel.contains(compareNode))
+                    // Falls sie noch nicht auf der aktuellen Ebene existiert, einfügen. Ansonsten Duplikat
+                    this.currLevel.add(compareNode);
+            }
+        }
+        if (!check) {
+            // Falls kein entsprechender Knoten gefunden wurde, bei einfügen
+            this.insertChild(newNode, high);
+            currLevel.add(newNode);
+            this.nodes.add(newNode);
+        }
+    }
+
+    private void insertChild(Node child, boolean high){
+        if(high) {
+            this.currentParent.highChild = child;
+            return;
+        }
+        this.currentParent.lowChild = child;
+    }
 
     // Public API
     public void synthetize(){
         
         // Listen zum Merken
-        LinkedList<Node> prevLevel;
-        LinkedList<Node> currLevel = new LinkedList<>();
+        this.currLevel = new LinkedList<>();
 
         // Wurzel erstellen
-        String prevVarName;
-        String currVarName = this.variables[0].trim();
+        this.currVarName = this.variables[0];
         Node newNode = new Node(this.function,currVarName);
-        currLevel.add(newNode);
+        this.currLevel.add(newNode);
         this.nodes.add(newNode);
 
-        // Weitere Variablen
-        Node currentParent;
-        Node compareNode;
-        boolean check;
-        BooleanExpression positiveCofactor;
-        BooleanExpression negativeCofactor;
-
         // Über die Variablen in der vorgegebenen Reihenfolge iterieren
-        for (int i = 1; i < variables.length; i++){
+        for (int i = 1; i < this.variables.length; i++){
             // 1 Level weitergehen
-            prevLevel = currLevel;
-            currLevel = new LinkedList<>();
+            this.prevLevel = this.currLevel;
+            this.currLevel = new LinkedList<>();
             // Aktuellen Variablennamen bestimmen
-            prevVarName = currVarName;
-            currVarName = this.variables[i].trim();
-            // Über alle Nodes aus der vorherigen Ebene iterieren
-            for(int j = 0; j < prevLevel.size(); j++){
-                // Aktuell zu untersuchende Node
-                currentParent = prevLevel.get(j);
-                // Kofaktoren mit aktuellem Variablennamen berechnen
-                positiveCofactor = currentParent.function.evalWithCofactor(prevVarName, true);
-                negativeCofactor = currentParent.function.evalWithCofactor(prevVarName, false);
-
-                // Es wird zunächst das highChild erstellt
-                newNode = new Node(positiveCofactor, currVarName);
-                // Es wird überprüft, ob die Node bereits existiert
-                check = false;
-                for (int k = 0; k < this.nodes.size(); k++){
-                    compareNode = this.nodes.get(k);
-                    if (compareNode.equals(newNode)){
-                        // Falls sie bereits existiert, auf die aktuelle Ebene ziehen und als highChild einfügen
-                        compareNode.varName = currVarName;
-                        currentParent.highChild = compareNode;
-                        check = true;
-                        if (!currLevel.contains(compareNode))
-                            // Falls sie noch nicht auf der aktuellen Ebene existiert, einfügen. Ansonsten Duplikat
-                            currLevel.add(compareNode);
-                    }
-                }
-                if (!check) {
-                    // Falls kein entsprechender Knoten gefunden wurde, einfügen
-                    currentParent.highChild = newNode;
-                    currLevel.add(newNode);
-                    this.nodes.add(newNode);
-                }
-                    
-
-                // Dann wird das lowChild erstellt
-                newNode = new Node(negativeCofactor, currVarName);
-                // Es wird überprüft, ob die Node bereits existiert
-                check = false;
-                for (int k = 0; k < this.nodes.size(); k++){
-                    compareNode = this.nodes.get(k);
-                    if (compareNode.equals(newNode)){
-                        // Falls sie bereits existiert, auf die aktuelle Ebene ziehen und als lowChild einfügen
-                        compareNode.varName = currVarName;
-                        currentParent.lowChild = compareNode;
-                        check = true;
-                        if (!currLevel.contains(compareNode))
-                            // Falls sie noch nicht auf der aktuellen Ebene existiert, einfügen. Ansonsten Duplikat
-                            currLevel.add(compareNode);
-                    }
-                }
-                if (!check) {
-                    // Falls kein entsprechender Knoten gefunden wurde, einfügen
-                    currentParent.lowChild = newNode;
-                    currLevel.add(newNode);
-                    this.nodes.add(newNode);
-                }
-            }
+            this.prevVarName = this.currVarName;
+            this.currVarName = this.variables[i].trim();
+            // Kofaktoren auswerten
+            this.evalCofactorsForCurrentLevel();
         }
+        // 1 Level weitergehen
+        this.prevLevel = this.currLevel;
+        this.currLevel = new LinkedList<>();
+        // Aktuellen Variablennamen bestimmen
+        this.prevVarName = this.currVarName;
+        this.currVarName = "blatt";
+        // Kofaktoren auswerten
+        this.evalCofactorsForCurrentLevel();
 
     }
 
@@ -150,6 +157,17 @@ public class ROBDD {
                         this.nodes.indexOf(node.lowChild)
                     );
                 }
+            }
+        }
+        var = "blatt";
+        // Überschrift anhängen
+        str += "\n\n\n######## Neue Ebene: \"" + var + "\" ########";
+        // Durch die Knoten Iterieren
+        for(int j = 0; j < this.nodes.size(); j++){
+            node = this.nodes.get(j);
+            // Wenn der Knoten auf der aktuellen Ebene liegt
+            if(node.varName.equals(var)){
+                str += node.toStringWithIndexWithoutChildren(j);
             }
         }
 

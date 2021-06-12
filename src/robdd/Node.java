@@ -59,4 +59,12 @@ public class Node {
         return str;
     }
 
+    public String toStringWithIndexWithoutChildren(int index){
+        String str = "\n\n    #### Knoten f" + index + " ####\n";
+        str += "    Markierung: " + (this.function.getValue() ? "1" : "0") + "\n";
+        str += "    Beschriebene Funktion: f" + index + " := " + this.function.toString() + "\n";
+        str += "    ####";
+        return str;
+    }
+
 }

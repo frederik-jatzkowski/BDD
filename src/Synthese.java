@@ -26,12 +26,16 @@ public class Synthese {
         }
         
         // Load array into memory
-        String variableLine = input.readLine() + "<blatt";
+        String variableLine = input.readLine();
         String expressionLine = input.readLine();
         input.close();
 
         // Make Array out of Variables;
         String[] variables = variableLine.split("<");
+        // Trim Variables
+        for (int i = 0; i < variables.length; i++){
+            variables[i] = variables[i].trim();
+        }
 
         ROBDD diagram = new ROBDD(variables, expressionLine);
         diagram.synthetize();

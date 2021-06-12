@@ -5,24 +5,27 @@ import java.util.LinkedList;
 
 public class Polynom implements BooleanExpression {
     
-
     // Attribute
     private LinkedList<Monom> monomes;
+    private String[] variables;
     
-
     // Konstruktor
-    public Polynom(String unparsedPolynom){
+    public Polynom(String unparsedPolynom, String[] variables){
         this.monomes = new LinkedList<>();
+        this.variables = variables;
         // In Monome aufteilen
         String[] unparsedMonomes = unparsedPolynom.split("\\+");
         // Jedes Monom parsen und abspeichern
+        Monom currMonom;
         for (String monom : unparsedMonomes){
-            this.monomes.add(new Monom(monom.trim()));
+            currMonom = new Monom(monom.trim(), this.variables);
+            this.monomes.add(currMonom);
         }
     }
     
-    public Polynom(LinkedList<Monom> monomes){
+    public Polynom(LinkedList<Monom> monomes, String[] variables){
         this.monomes = monomes;
+        this.variables = variables;
     }
     
     
@@ -48,10 +51,10 @@ public class Polynom implements BooleanExpression {
         // Falls das Polynom leer ist, ist es eine konstante 0
         if (monomesWithCofactor.size() == 0)
             return new Constant(false);
-        // Andernfalls erstelle das verbleibende, vereinfachte Polynom
-        Polynom newPolynom = new Polynom(monomesWithCofactor);
-        newPolynom.simplyfy();
-        // Wenn das vereinfachte Polynom ein Komplement enthält
+        // Andernfalls erstelle das verbleibende Polynom und normalisiere
+        Polynom newPolynom = new Polynom(monomesWithCofactor, this.variables);
+        newPolynom.normalizeWithQuineMcCluskey();
+        // Wenn das Polynom ein Komplement enthält
         if(newPolynom.hasComplementingMonomes())
             return new Constant(true);
         // Ansonsten gib das vereinfachte Polynom zurück
@@ -96,42 +99,104 @@ public class Polynom implements BooleanExpression {
         return str;
     }
 
-
-    // Methoden zur Vereinfachung
-    public void simplyfy(){
-        // Das Absorptionsgesetz anwenden
-        //this.useAbsorption();
-        // Das Verfahren von Quine anwenden
-        this.useQuine();
-    }
-
-    private void useAbsorption(){
-        Monom outerMonom;
-        Monom innerMonom;
-        // Mit äußerer Schleife durch alle Monome iterieren
-        for(int i = 0; i < this.monomes.size(); i++){
-            outerMonom = this.monomes.get(i);
-            // Mit innerer Schleife durch alle Monome iterieren
-            for(int j = 0; j < this.monomes.size(); j++){
-                innerMonom = this.monomes.get(j);
-                // das äußere Monom mit allen inneren Monomen vergleichen
-                if(i != j && innerMonom.includes(outerMonom)){
-                    // Falls ein Monom komplett in einem zweite Monom enthalten ist, das zweite entfernen
-                    this.monomes.remove(j);
-                    // Der Entfernung in den Indizes Rechnung tragen
-                    j--;
-                    i--;
-                }
+    // Implementierung von Quine&McCluskey
+    private void toMintermPolynom(){
+        /* Diese Methode erweitert das Polynom so,
+        *  dass es dieselbe boolesche Funktion
+        *  mit Mintermen darstellt (Terme mit allen gegebenen Variablen).
+        */
+        // Über die Variablen iterieren
+        String currVar;
+        Monom currMonom;
+        for (int i = 0; i < this.variables.length; i++){
+            currVar = this.variables[i];
+            // Überprüfen, in welchen Monomen die Variable nicht enthalten ist
+            for (int j = 0; j < this.monomes.size(); j++){
+                currMonom = this.monomes.get(j);
+                // Falls sie bereits benutzt wird
+                if(currMonom.usesVariable(currVar))
+                    continue;
+                // Ansonsten erweitern
+                this.monomes.add(currMonom.extendForMintermWithVar(currVar));
             }
         }
+
+        // Nun gibt es nur noch Minterme
+        // Es ist aber nicht ausgeschlossen, dass Monome doppelt vorkommen
+        this.removeDuplicates();
     }
+    
+    private void removeDuplicates(){
+        // Diese Funktion entfernt doppelt vorkommende Monome
+        // Über alle Monome iterieren
+        Monom outerMonom;
+        Monom innerMonom;
+        for(int i = 0; i < this.monomes.size(); i++){
+            outerMonom = this.monomes.get(i);
+            //Mit allen anderen Monomen vergleichen
+            for(int j = i + 1; j < this.monomes.size(); j++){
+                innerMonom = this.monomes.get(j);
+                // Falls nicht äquivalent
+                if(!outerMonom.equals(innerMonom))
+                    continue;
+                // Ansonsten entfernen
+                this.monomes.remove(j);
+                j--;
+            }
+        }
+        // Nun sind keine Duplikate mehr enthalten
+    }
+    
+    public void normalizeWithQuineMcCluskey(){
+        // Diese Methode implementiert den Quine & McCluskey Algorithmus
+        // Das Polynom zu einem Minterm-Polynom machen
+        this.toMintermPolynom();
+        LinkedList<Monom> prevLevelPartnered;
+        LinkedList<Monom> currLevelUnpartnered;
+        LinkedList<Monom> currLevelPartnered = this.monomes;
+        // Über die Längen absteigend iterieren solange es auf der letzten Ebene noch Implikanten zum Vereinfachen gab
+        LinkedList<Monom> prim = new LinkedList<Monom>();
+        Monom outerMonom;
+        Monom innerMonom;
+        for(int i = this.variables.length; i >= 0 && currLevelPartnered.size() != 0; i--){
+            // Die aktuelle Liste Prim anhängen und leeren
+            // Weitergehen
+            prevLevelPartnered = currLevelPartnered;
+            // Verkehrungen für nächsten Durchgang
+            currLevelUnpartnered = (LinkedList<Monom>) prevLevelPartnered.clone();
+            currLevelPartnered = new LinkedList<Monom>();
+            // Über alle Monome iterieren
+            for (int j = 0; j < prevLevelPartnered.size(); j++){
+                outerMonom = prevLevelPartnered.get(j);
+                // Mit den übrigen vergleichen
+                for(int k = j + 1; k < prevLevelPartnered.size(); k++){
+                    innerMonom = prevLevelPartnered.get(k);
+                    // Wenn die Monome nicht Quine & McCluskey-Kompatibel sind:
+                    if(!outerMonom.isQuineMcCluskeyComplatibleTo(innerMonom))
+                        continue;
+                    // Ansonsten füge das reduzierte Monom zu den verkuppelten hinzu
+                    currLevelPartnered.add(outerMonom.reduceWithQuineMcCluskey(innerMonom));
+                    // und entferne beide aus den nicht verkuppelten
+                    currLevelUnpartnered.remove(outerMonom);
+                    currLevelUnpartnered.remove(innerMonom);
+                }
+            }
+            // Füge nun die in der vorigen Ebene nicht verkuppelten der Menge prim hinzu
+            prim.addAll(currLevelUnpartnered);
+        }
+        this.monomes = prim;
+        // Nun besteht das Polynom nur aus Primimplikanten
+        this.removeDuplicates();
+    }
+
+    // Methoden zur Vereinfachung
 
     public boolean hasComplementingMonomes(){
         Monom outerMonom;
         for(int i = 0; i < this.monomes.size(); i++){
             outerMonom = this.monomes.get(i);
             for(int j = 0; j < this.monomes.size(); j++){
-                if(i != j && this.monomes.get(j).isComplementOf(outerMonom)){
+                if(i != j && this.monomes.get(j).complements(outerMonom)){
                     return true;
                 }
             }
@@ -139,34 +204,5 @@ public class Polynom implements BooleanExpression {
         return false;
     }
 
-    private void useQuine(){
-        int matches = 1;
-        Monom outerMonom;
-        Monom innerMonom;
-        // Solange in der Schleife bleiben, bis es keine Matches für Quine mehr gibt
-        while(matches != 0){
-            // Matches auf 0 zurücksetzen
-            matches = 0;
-            // Mit äußerer Schleife durch alle Monome iterieren
-            for(int i = 0; i < this.monomes.size(); i++){
-                outerMonom = this.monomes.get(i);
-                for(int j = 0; j < this.monomes.size(); j++){
-                    innerMonom = this.monomes.get(j);
-                    // das äußere Monom mit allen inneren Monomen vergleichen
-                    if(i != j && outerMonom.canQuine(innerMonom)){
-                        // Falls Quine angewendet werden kann, reduzieren
-                        outerMonom.useQuine(innerMonom);
-                        // Und das Redundante entfernen
-                        this.monomes.remove(j);
-                        // Der Entfernung in den Indizes Rechnung tragen
-                        j--;
-                        i--;
-                        // Match mitzählen
-                        matches++;
-                    }
-                }
-            }
-            this.useAbsorption();
-        }
-    }
+
 }

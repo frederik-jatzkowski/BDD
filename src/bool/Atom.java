@@ -5,7 +5,7 @@ public class Atom implements BooleanExpression {
     
     // Attribute
     public final String varName;
-    public final boolean negated;
+    public final boolean isNegated;
     
     
     // Konstruktor
@@ -13,18 +13,18 @@ public class Atom implements BooleanExpression {
         // Atom aus der Textdarstellung parsen
         unparsedAtom = unparsedAtom.trim();
         if(unparsedAtom.charAt(0) == '!'){
-            this.negated = true;
+            this.isNegated = true;
             this.varName = unparsedAtom.substring(1);
         } else {
-            this.negated = false;
+            this.isNegated = false;
             this.varName = unparsedAtom;
         }
     }
     
-    public Atom(String varName, boolean negated){
+    public Atom(String varName, boolean isNegated){
         // Atom direkt erstellen
         this.varName = varName;
-        this.negated = negated;
+        this.isNegated = isNegated;
     }
     
     
@@ -34,7 +34,7 @@ public class Atom implements BooleanExpression {
         if (!(this.varName.equals(varName)))
             return this;
         // Andernfalls
-        if(this.negated)
+        if(this.isNegated)
             return new Constant(!value);
         return new Constant(value);
     }
@@ -50,7 +50,7 @@ public class Atom implements BooleanExpression {
         if(!(o instanceof Atom)) return false;
         // Vergleich der Werte
         Atom o2 = (Atom) o;
-        if(this.varName.equals(o2.varName) && this.negated == o2.negated) return true;
+        if(this.varName.equals(o2.varName) && this.isNegated == o2.isNegated) return true;
         return false;
     }
 
@@ -59,14 +59,14 @@ public class Atom implements BooleanExpression {
         if(!a.varName.equals(this.varName))
             return false;
         // Vergleich der Werte
-        if(this.negated != a.negated)
+        if(this.isNegated != a.isNegated)
             return true;
         return false;
     }
 
     @Override
     public String toString(){
-        if(this.negated)
+        if(this.isNegated)
             return "!" + varName;
         return varName;
     }
