@@ -6,7 +6,7 @@ import java.util.LinkedList;
 public class Monom implements BooleanExpression {
     
     // Attribute
-    private LinkedList<Atom> atoms;
+    private LinkedList<Literal> literals;
     private String[] variables;
     // Quine & McCluskey
     private int negationCount;
@@ -14,22 +14,22 @@ public class Monom implements BooleanExpression {
     
     // Konstruktor
     public Monom(String unparsedMonom, String[] variables){
-        this.atoms = new LinkedList<>();
+        this.literals = new LinkedList<>();
         this.variables = variables;
-        // In Atome aufteilen
-        String[] unparsedAtoms = unparsedMonom.split("\\*");
-        // Jedes Atom parsen und abspeichern
-        Atom currAtom;
-        for (String atom : unparsedAtoms){
-            currAtom = new Atom(atom.trim());
-            this.atoms.add(currAtom);
+        // In Literale aufteilen
+        String[] unparsedLiterals = unparsedMonom.split("\\*");
+        // Jedes Literal parsen und abspeichern
+        Literal currLiteral;
+        for (String literal : unparsedLiterals){
+            currLiteral = new Literal(literal.trim());
+            this.literals.add(currLiteral);
         }
         // Normalisieren
         this.normalize();
     }
     
-    public Monom(LinkedList<Atom> atoms, String[] variables){
-        this.atoms = atoms;
+    public Monom(LinkedList<Literal> literals, String[] variables){
+        this.literals = literals;
         this.variables = variables;
         // Normalisieren
         this.normalize();
@@ -38,27 +38,27 @@ public class Monom implements BooleanExpression {
     
     // Public API
     public BooleanExpression evalWithCofactor(String varName, boolean value){
-        // Jedes Atome mit Kofaktor auswerten
-        LinkedList<Atom> atomsWithCofactor = new LinkedList<>();
-        // Alle Atome mit dem Kofaktor auswerten
+        // Jedes Literale mit Kofaktor auswerten
+        LinkedList<Literal> literalsWithCofactor = new LinkedList<>();
+        // Alle Literale mit dem Kofaktor auswerten
         BooleanExpression current;
-        for (Atom atom : this.atoms){
-            // Das untersuchte Atome mit dem Kofaktor auswerten
-            current = atom.evalWithCofactor(varName, value);
+        for (Literal literal : this.literals){
+            // Das untersuchte Literale mit dem Kofaktor auswerten
+            current = literal.evalWithCofactor(varName, value);
             if (current instanceof Constant && !current.getValue()){
-                // Wenn das Atom eine Konstante 0 ist, ist das gesamte Monom 0
+                // Wenn das Literal eine Konstante 0 ist, ist das gesamte Monom 0
                 return new Constant(false);
             } else if (!(current instanceof Constant)){
-                // Wenn das Atom keine Konstante ist, dem neuen Monom übergeben
-                atomsWithCofactor.add((Atom) current);
+                // Wenn das Literal keine Konstante ist, dem neuen Monom übergeben
+                literalsWithCofactor.add((Literal) current);
             }
-            // Wenn das Atom eine Konstante 1 ist, fällt es weg
+            // Wenn das Literal eine Konstante 1 ist, fällt es weg
         }
         // Falls das Monom leer ist, ist es eine konstante 1
-        if (atomsWithCofactor.size() == 0)
+        if (literalsWithCofactor.size() == 0)
             return new Constant(true);
         // Andernfalls gib das verbleibende Monom zurück
-        return new Monom(atomsWithCofactor, this.variables);
+        return new Monom(literalsWithCofactor, this.variables);
     }
     
     public boolean getValue(){
@@ -72,14 +72,14 @@ public class Monom implements BooleanExpression {
         if(!(o instanceof Monom)) return false;
         Monom o2 = (Monom) o;
         // Größen Vergleichen
-        if (this.atoms.size() != o2.atoms.size())
+        if (this.literals.size() != o2.literals.size())
             return false;
         // Vergleich der Werte
-        Iterator<Atom> atomsIter = this.atoms.iterator();
-        Atom current;
-        while (atomsIter.hasNext()){
-            current = atomsIter.next();
-            if(!o2.atoms.contains(current)) return false;
+        Iterator<Literal> literalsIter = this.literals.iterator();
+        Literal current;
+        while (literalsIter.hasNext()){
+            current = literalsIter.next();
+            if(!o2.literals.contains(current)) return false;
         }
         return true;
     }
@@ -93,61 +93,61 @@ public class Monom implements BooleanExpression {
 
     private void sortVariables(){
         // Variablen deklarieren
-        LinkedList<Atom> sortedAtoms = new LinkedList<>();
+        LinkedList<Literal> sortedLiterals = new LinkedList<>();
         String currVar;
-        Atom currAtom;
+        Literal currLiteral;
         // Durch die vorgegebenen Variablen iterieren
         for (int i = 0; i < this.variables.length; i++){
             currVar = this.variables[i];
-            // Über Atome iterieren
-            for(int j = 0; j < this.atoms.size(); j++){
-                currAtom = this.atoms.get(j);
-                // Falls das Atom den gesuchten Namen hat
-                if(currVar.equals(currAtom.varName)){
+            // Über Literale iterieren
+            for(int j = 0; j < this.literals.size(); j++){
+                currLiteral = this.literals.get(j);
+                // Falls das Literal den gesuchten Namen hat
+                if(currVar.equals(currLiteral.varName)){
                     // In der richtigen Ordnung an die neue Liste anhängen
-                    sortedAtoms.add(currAtom);
+                    sortedLiterals.add(currLiteral);
                     // Aus der inneren Schleife ausbrechen
                     break;
                 }
             }
         }
         // Die sortierte Liste einsetzen
-        this.atoms = sortedAtoms;
+        this.literals = sortedLiterals;
     }
     
     private void evalNegationCount(){
         this.negationCount = 0;
-        Atom currAtom;
-        // Durch Atome iterieren
-        for (int i = 0; i < this.atoms.size();i++){
-            currAtom = this.atoms.get(i);
-            // Falls das aktuelle Atom negiert ist, zählen
-            if(currAtom.isNegated)
+        Literal currLiteral;
+        // Durch Literale iterieren
+        for (int i = 0; i < this.literals.size();i++){
+            currLiteral = this.literals.get(i);
+            // Falls das aktuelle Literal negiert ist, zählen
+            if(currLiteral.isNegated)
                 this.negationCount++;
         }
     }
 
     private void evalUsedVariables(){
         this.usedVariables = new LinkedList<>();
-        Atom currAtom;
-        // Durch Atome iterieren
-        for (int i = 0; i < this.atoms.size();i++){
-            currAtom = this.atoms.get(i);
-            // Variable des aktuellen Atoms auflisten
-            this.usedVariables.add(currAtom.varName);
+        Literal currLiteral;
+        // Durch Literale iterieren
+        for (int i = 0; i < this.literals.size();i++){
+            currLiteral = this.literals.get(i);
+            // Variable des aktuellen Literals auflisten
+            this.usedVariables.add(currLiteral.varName);
         }
     }
 
     public int size(){
-        return this.atoms.size();
+        return this.literals.size();
     }
 
     public Monom extendForMintermWithVar(String unusedVarName){
         // Kopieren
         Monom secondMonom = this.copy();
         // Gegensäzlich erweitern
-        this.addAtom(new Atom(unusedVarName, true));
-        secondMonom.addAtom(new Atom(unusedVarName, false));
+        this.addLiteral(new Literal(unusedVarName, true));
+        secondMonom.addLiteral(new Literal(unusedVarName, false));
         return secondMonom;
     }
 
@@ -155,16 +155,16 @@ public class Monom implements BooleanExpression {
         return this.usedVariables.contains(varName);
     }
 
-    private void removeAtom(Atom a){
+    private void removeLiteral(Literal a){
         // Entfernen
-        this.atoms.remove(a);
+        this.literals.remove(a);
         // Und wieder normalisieren
         this.normalize();
     }
 
-    private void addAtom(Atom a){
+    private void addLiteral(Literal a){
         // Hinzufügen
-        this.atoms.add(a);
+        this.literals.add(a);
         // Und wieder normalisieren
         this.normalize();
     }
@@ -182,35 +182,35 @@ public class Monom implements BooleanExpression {
             return false;
         // Andernfalls sind die beiden Monome potenziell kompatibel
         // Es bleibt festzustellen, dass es nur eine unterschiedliche Variable gibt
-        // Über Atome iterieren
-        Atom currAtom1;
-        Atom currAtom2;
+        // Über Literale iterieren
+        Literal currLiteral1;
+        Literal currLiteral2;
         int differences = 0;
-        for (int i = 0; i < this.atoms.size(); i++){
+        for (int i = 0; i < this.literals.size(); i++){
             // Setzt vorraus, das beide Monome normalisierte Ordnung haben und kompatibel sind
-            currAtom1 = this.atoms.get(i);
-            currAtom2 = m.atoms.get(i);
+            currLiteral1 = this.literals.get(i);
+            currLiteral2 = m.literals.get(i);
             // Falls sie sich unterscheiden
-            if (currAtom1.isNegated != currAtom2.isNegated)
+            if (currLiteral1.isNegated != currLiteral2.isNegated)
                 differences++;
         }
         return differences == 1;
     }
 
     public Monom reduceWithQuineMcCluskey(Monom m){
-        // Durch die Atome iterieren
-        Atom currAtom1;
-        Atom currAtom2;
-        for (int i = 0; i < this.atoms.size(); i++){
+        // Durch die Literale iterieren
+        Literal currLiteral1;
+        Literal currLiteral2;
+        for (int i = 0; i < this.literals.size(); i++){
             // Setzt vorraus, das beide Monome normalisierte Ordnung haben und kompatibel sind
-            currAtom1 = this.atoms.get(i);
-            currAtom2 = m.atoms.get(i);
-            // Falls es nicht das gesuchte Atom ist
-            if (currAtom1.isNegated == currAtom2.isNegated)
+            currLiteral1 = this.literals.get(i);
+            currLiteral2 = m.literals.get(i);
+            // Falls es nicht das gesuchte Literal ist
+            if (currLiteral1.isNegated == currLiteral2.isNegated)
                 continue;
             // Andernfalls
             Monom copy = this.copy();
-            copy.removeAtom(currAtom1);
+            copy.removeLiteral(currLiteral1);
             return copy;
         }
         // Für den Compiler
@@ -219,11 +219,11 @@ public class Monom implements BooleanExpression {
     
     // Sonstige Optimierungen
     public boolean complements(Monom m){
-        // Beide Monome müssen 1 Atom groß sein
-        if(m.atoms.size() > 1 || this.atoms.size() > 1)
+        // Beide Monome müssen 1 Literal groß sein
+        if(m.literals.size() > 1 || this.literals.size() > 1)
             return false;
         // Vergleich der Werte
-        if(this.atoms.getFirst().isComplementOf(m.atoms.getFirst()))
+        if(this.literals.getFirst().isComplementOf(m.literals.getFirst()))
             return true;
         return false;
     }
@@ -232,12 +232,12 @@ public class Monom implements BooleanExpression {
     @Override
     public String toString(){
         // Guard
-        if (this.atoms.size() == 0) return "0";
-        // Über Atome iterieren
-        Iterator<Atom> atomsIter = this.atoms.iterator();
-        String str = atomsIter.next().toString();
-        while(atomsIter.hasNext()){
-            str += "*" + atomsIter.next().toString();
+        if (this.literals.size() == 0) return "0";
+        // Über Literale iterieren
+        Iterator<Literal> literalsIter = this.literals.iterator();
+        String str = literalsIter.next().toString();
+        while(literalsIter.hasNext()){
+            str += "*" + literalsIter.next().toString();
         }
         // Rückgabe
         return str;

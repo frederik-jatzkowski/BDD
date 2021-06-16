@@ -1,6 +1,6 @@
 package bool;
 
-public class Atom implements BooleanExpression {
+public class Literal implements BooleanExpression {
     
     
     // Attribute
@@ -9,20 +9,20 @@ public class Atom implements BooleanExpression {
     
     
     // Konstruktor
-    public Atom(String unparsedAtom){
-        // Atom aus der Textdarstellung parsen
-        unparsedAtom = unparsedAtom.trim();
-        if(unparsedAtom.charAt(0) == '!'){
+    public Literal(String unparsedLiteral){
+        // Literal aus der Textdarstellung parsen
+        unparsedLiteral = unparsedLiteral.trim();
+        if(unparsedLiteral.charAt(0) == '!'){
             this.isNegated = true;
-            this.varName = unparsedAtom.substring(1);
+            this.varName = unparsedLiteral.substring(1);
         } else {
             this.isNegated = false;
-            this.varName = unparsedAtom;
+            this.varName = unparsedLiteral;
         }
     }
     
-    public Atom(String varName, boolean isNegated){
-        // Atom direkt erstellen
+    public Literal(String varName, boolean isNegated){
+        // Literal direkt erstellen
         this.varName = varName;
         this.isNegated = isNegated;
     }
@@ -47,15 +47,15 @@ public class Atom implements BooleanExpression {
     public boolean equals(Object o){
         // Guards
         if(o == null) return false;
-        if(!(o instanceof Atom)) return false;
+        if(!(o instanceof Literal)) return false;
         // Vergleich der Werte
-        Atom o2 = (Atom) o;
+        Literal o2 = (Literal) o;
         if(this.varName.equals(o2.varName) && this.isNegated == o2.isNegated) return true;
         return false;
     }
 
-    public boolean isComplementOf(Atom a){
-        // Beide Atome müssen dieselbe Variable haben
+    public boolean isComplementOf(Literal a){
+        // Beide Literale müssen dieselbe Variable haben
         if(!a.varName.equals(this.varName))
             return false;
         // Vergleich der Werte
